@@ -3,8 +3,15 @@ import { Router, Request, Response } from "express";
 import jwt from 'jsonwebtoken';
 import * as usercontroller from "../controllers/usercontroller";
 import { User } from '../models/user';
+const winston = require('winston');
+const { body, validationResult } = require("express-validator");
 const router = Router();
 
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.json(),
+    transports: [new winston.transports.Console()],
+});
 
  async function hashPassword(password:string):Promise<string>{
     const saltRounds = 15;
@@ -22,6 +29,7 @@ const router = Router();
     try{
     const user = req.body;
     const {name,email,password}=user;
+    
     const newUser = await User.create({
         name,email,password
     });
@@ -42,11 +50,23 @@ catch(error:any){
  });
 
 router.post("/auth/login",async (req,res)=>{
+    //Logging using winston
+    logger.info('Info message');
+    
     const userId=12333444;
     const emailFromDB = "ram@ram.com";
     const passwordFromDB = "Ram@1234";
     const user = req.body;
     const {email,password}=user;
+    [
+        [
+            body(req.body.email).isEmail(),
+            body(req.body.password).notEmpty()
+        ]
+    ]
+    //Sanitization of payload
+    const errors = validationResult(req.body);
+    
     const hashedPassword = await hashPassword(passwordFromDB);
     const isMatch = await comparePassword(password,hashedPassword);
     //Get email from DB
